@@ -24,6 +24,6 @@ jobs:
         
     - name: Run Connection Test
       env:
-        # This pulls from the "Secrets" you will set up in GitHub Settings
+        # pulls from the "Secrets" in GitHub Settings
         RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
       run: python api_setup/tests/test_riot_api_connection.py
