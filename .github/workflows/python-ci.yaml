@@ -1,0 +1,29 @@
+name: Python CI
+
+on:
+  push:
+    branches: [ "main", "feature/api-integration" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests python-dotenv
+        
+    - name: Run Connection Test
+      env:
+        # This pulls from the "Secrets" you will set up in GitHub Settings
+        RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+      run: python api_setup/tests/test_riot_api_connection.py
