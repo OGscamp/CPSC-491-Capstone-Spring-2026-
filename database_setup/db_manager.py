@@ -30,3 +30,34 @@ def save_player(puuid, summoner_name):
         cursor.close()
         conn.close()
         print(f"Saved {summoner_name} to database.")
+
+def initialize_db():
+    conn = get_db_connection()
+    if conn:
+        cursor = conn.cursor()
+        # Create PLAYER table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS PLAYER (
+                summoner_id VARCHAR(100) PRIMARY KEY,
+                summoner_name VARCHAR(45),
+                wins INT DEFAULT 0,
+                losses INT DEFAULT 0,
+                highest_season_tier VARCHAR(20)
+            )
+        """)
+        # Create GAME table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS GAME (
+                game_id VARCHAR(50) PRIMARY KEY,
+                game_date DATETIME,
+                game_length INT,
+                winning_team CHAR(10)
+            )
+        """)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("Database initialized: Tables verified/created.")
+
+if __name__ == "__main__":
+    initialize_db()
