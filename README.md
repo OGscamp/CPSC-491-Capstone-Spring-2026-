@@ -4,4 +4,7 @@ To test the API script yourself locally:
 3. Create an .env file and paste RIOT_API_KEY=GeneratedAPIKey
 4. Run the script (python -m api_setup.api_controller)
 
+To run database tests:
+python -m database_setup.tests.test_database_integration
+
 WILL NOT WORK SINCE DATABASE IS HOSTED LOCALLY AT THE MOMENT
