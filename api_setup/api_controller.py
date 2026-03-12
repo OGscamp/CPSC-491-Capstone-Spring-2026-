@@ -2,6 +2,7 @@ import os
 import requests
 import time
 from dotenv import load_dotenv
+from database_setup.db_manager import save_player
 
 load_dotenv()
 
@@ -43,12 +44,18 @@ class RiotAPIProvider:
         return []
 
 if __name__ == "__main__":
-    # Example usage for final verification
     try:
         provider = RiotAPIProvider()
-        puuid = provider.get_puuid("Luuser", "Meow")
+        game_name = "Dedgurs"
+        tag_line = "MEOW"
+        
+        puuid = provider.get_puuid(game_name, tag_line)
+        
         if puuid:
             print(f"PUUID: {puuid}")
+            # Link API retrieval to Database storage
+            save_player(puuid, game_name) 
+            
             matches = provider.get_match_ids(puuid)
             print(f"Matches: {matches}")
     except Exception as e:

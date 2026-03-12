@@ -9,6 +9,18 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    # Step 1: Spin up a temporary MySQL database in the cloud
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_DATABASE: lol_prediction_db
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
     steps:
     - uses: actions/checkout@v4
     
@@ -20,10 +32,21 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install requests python-dotenv
+        # Added mysql-connector-python here
+        pip install requests python-dotenv mysql-connector-python
         
-    - name: Run Connection Test
+    - name: Run API Connection Test
       env:
-        # pulls from the "Secrets" in GitHub Settings
         RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
       run: python api_setup/tests/test_riot_api_connection.py
+
+    - name: Run Database Integration Test
+      env:
+        DB_HOST: 127.0.0.1
+        DB_USER: root
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        DB_NAME: lol_prediction_db
+      run: |
+        # We run db_manager first to ensure tables exist in the fresh CI database
+        python -m database_setup.db_manager
+        python -m database_setup.tests.test_database_integration
