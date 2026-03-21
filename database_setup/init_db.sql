@@ -18,3 +18,12 @@ CREATE TABLE IF NOT EXISTS GAME (
     game_length INT,
     winning_team CHAR(10)
 );
+
+-- MATCH_DATA Table: Stores raw match JSON for ML training
+CREATE TABLE IF NOT EXISTS MATCH_DATA (
+    match_id VARCHAR(50) PRIMARY KEY,
+    game_date DATETIME,
+    game_length INT,
+    winning_team CHAR(10),
+    raw_json LONGTEXT
+);

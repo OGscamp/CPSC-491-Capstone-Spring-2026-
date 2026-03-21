@@ -3,6 +3,7 @@ import requests
 import time
 from dotenv import load_dotenv
 from database_setup.db_manager import save_player
+from database_setup.db_manager import save_match_data
 
 load_dotenv()
 
@@ -43,6 +44,20 @@ class RiotAPIProvider:
             return response.json()
         return []
 
+    def get_match(self, match_id):
+        url = f"https://{self.region}.api.riotgames.com/lol/match/v5/matches/{match_id}"
+        response = self._make_request(url)
+        if response.status_code == 200:
+            return response.json()
+        return None
+
+    def fetch_and_store_matches(self, puuid, count=5):
+        match_ids = self.get_match_ids(puuid, count=count)
+        for match_id in match_ids:
+            match_json = self.get_match(match_id)
+            if match_json:
+                save_match_data(match_json)
+
 if __name__ == "__main__":
     try:
         provider = RiotAPIProvider()
@@ -58,5 +73,6 @@ if __name__ == "__main__":
             
             matches = provider.get_match_ids(puuid)
             print(f"Matches: {matches}")
+            provider.fetch_and_store_matches(puuid, count=5)
     except Exception as e:
         print(f"System Error: {e}")
