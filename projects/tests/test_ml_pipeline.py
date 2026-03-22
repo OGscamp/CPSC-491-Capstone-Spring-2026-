@@ -11,6 +11,9 @@ THIS_DIR = os.path.dirname(__file__)
 ML_SCRIPTS_DIR = os.path.abspath(os.path.join(THIS_DIR, "..", "ML Scripts"))
 sys.path.append(ML_SCRIPTS_DIR)
 
+OUTPUT_DIR = os.path.join(THIS_DIR, "output")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 from feature_engineering import extract_team_features
 from dataset_builder import build_dataset
 
@@ -91,15 +94,16 @@ def test_build_dataset_from_json_files():
     match1 = _make_match_json(team1_win=True)
     match2 = _make_match_json(team1_win=False)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        file1 = os.path.join(tmpdir, "match1.json")
-        file2 = os.path.join(tmpdir, "match2.json")
-        with open(file1, "w", encoding="utf-8") as f:
-            json.dump(match1, f)
-        with open(file2, "w", encoding="utf-8") as f:
-            json.dump(match2, f)
+    file1 = os.path.join(OUTPUT_DIR, "match1.json")
+    file2 = os.path.join(OUTPUT_DIR, "match2.json")
+    with open(file1, "w", encoding="utf-8") as f:
+        json.dump(match1, f)
+    with open(file2, "w", encoding="utf-8") as f:
+        json.dump(match2, f)
 
-        df = build_dataset([file1, file2])
+    df = build_dataset([file1, file2])
+    csv_path = os.path.join(OUTPUT_DIR, "matches_dataset.csv")
+    df.to_csv(csv_path, index=False)
 
     assert df.shape[0] == 2
     assert "win" in df.columns
@@ -121,12 +125,11 @@ def test_xgboost_training_creates_model_file():
         ]
     )
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        csv_path = os.path.join(tmpdir, "tiny_dataset.csv")
-        model_path = os.path.join(tmpdir, "xgb_model.json")
-        df.to_csv(csv_path, index=False)
+    csv_path = os.path.join(OUTPUT_DIR, "tiny_dataset.csv")
+    model_path = os.path.join(OUTPUT_DIR, "xgb_model.json")
+    df.to_csv(csv_path, index=False)
 
-        results = train_xgboost(csv_path, model_path, test_size=0.33, seed=7)
+    results = train_xgboost(csv_path, model_path, test_size=0.33, seed=7)
 
-        assert os.path.exists(model_path)
-        assert results["rows"] == df.shape[0]
+    assert os.path.exists(model_path)
+    assert results["rows"] == df.shape[0]
