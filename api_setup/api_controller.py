@@ -13,8 +13,8 @@ class RiotAPIProvider:
         self.headers = {"X-Riot-Token": self.api_key}
         
         # Safeguard: Validate API Key on initialization
-        if not self.api_key:
-            raise ValueError("RIOT_API_KEY not found in environment variables.")
+        if not self.api_key or self.api_key.lower().startswith("your_"):
+            raise ValueError("RIOT_API_KEY is missing or invalid. Set a valid Riot API key in .env.")
 
     def _make_request(self, url):
         # Internal helper to handle rate limiting
@@ -33,7 +33,19 @@ class RiotAPIProvider:
         url = f"https://{self.region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}"
         response = self._make_request(url)
         if response.status_code == 200:
-            return response.json().get('puuid')
+            puuid = response.json().get('puuid')
+            if puuid:
+                print(f"PUUID found: {puuid}")
+                return puuid
+            print("PUUID not found in response JSON.")
+            return None
+
+        if response.status_code == 401:
+            print("Failed to get PUUID: 401 Unauthorized. Check your Riot API key and permissions.")
+        elif response.status_code == 404:
+            print("Failed to get PUUID: 404 Not Found. Verify summoner name/tag and region.")
+        else:
+            print(f"Failed to get PUUID. Status: {response.status_code}, Body: {response.text}")
         return None
 
     def get_match_ids(self, puuid, count=5):
@@ -41,6 +53,7 @@ class RiotAPIProvider:
         response = self._make_request(url)
         if response.status_code == 200:
             return response.json()
+        print(f"Failed to get match IDs. Status: {response.status_code}, Body: {response.text}")
         return []
 
 if __name__ == "__main__":

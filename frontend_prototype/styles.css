@@ -1,0 +1,60 @@
+* { box-sizing: border-box; }
+:root {
+  --bg: #1d1d1d;
+  --card: #ffffff;
+  --text: #333;
+  --muted: #777;
+  --primary: #333;
+  --accent: #1f7bcf;
+  --accent-hover: #155a9c;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI Symbol", sans-serif;
+  color: var(--text);
+  background: linear-gradient(135deg, #e7ecff, #f4f4f8);
+  min-height: 100vh;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+  padding: 0.75rem 1.2rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.navbar .brand { font-weight: 700; font-size: 1.45rem; }
+.navbar .nav-links { display: flex; gap: 0.75rem; }
+.navbar .nav-link { cursor: pointer; font-size: 0.95rem; text-decoration: none; color: #444; padding: 0.3rem 0.55rem; border-radius: 6px; }
+.navbar .nav-link:hover, .navbar .nav-link.active { background: #eef2ff; color: #1c3a70; }
+.navbar .auth-buttons { display: flex; gap: 0.5rem; }
+
+.main { padding: 1rem; max-width: 940px; margin: 1.2rem auto; }
+.card { background: var(--card); border-radius: 12px; box-shadow: 0 12px 34px rgba(89, 108, 149, 0.12); padding: 1.2rem; }
+.heading { margin: 0 0 1rem 0; font-size: 1.55rem; }
+
+.form-group { margin-bottom: 0.95rem; }
+.label { display: block; margin-bottom: 0.3rem; font-weight: 600; color: #4b5563; }
+.text-input { width: 100%; border: 1px solid #dbe2f3; background: #fff; border-radius: 8px; height: 42px; padding: 0 12px; transition: border 0.2s ease; }
+.text-input:focus { border-color: #1f71d8; outline: none; }
+.button { border: 1px solid transparent; background: #1f7bcf; color: #fff; font-weight: 700; border-radius: 8px; padding: 0.6rem 1.05rem; cursor: pointer; transition: background 0.2s ease; }
+.button:hover { background: #155a9c; }
+.button.secondary { background: #fff; color: #333; border: 1px solid #dde2ed; }
+
+.status { font-size: 0.95rem; color: var(--muted); margin-top: 0.5rem; }
+
+.hidden { display: none; }
+
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.card.small { padding: 1rem; }
+
+@media (max-width: 650px) {
+  .navbar { flex-wrap: wrap; gap: 0.7rem; }
+  .navbar .nav-links { flex-wrap: wrap; }
+}
