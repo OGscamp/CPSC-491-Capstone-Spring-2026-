@@ -40,6 +40,9 @@ jobs:
         RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
       run: python api_setup/tests/test_riot_api_connection.py
 
+    - name: Run API Security Test
+      run: python api_setup/tests/test_security.py
+
     - name: Run Database Integration Test
       env:
         DB_HOST: 127.0.0.1
