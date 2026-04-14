@@ -1,6 +1,7 @@
 import os
 import requests
 from dotenv import load_dotenv
+import sys
 
 load_dotenv()
 
@@ -36,4 +37,6 @@ def test_connection():
         return False
 
 if __name__ == "__main__":
-    test_connection()
+    result = test_connection()
+    if not result:
+        sys.exit(1)

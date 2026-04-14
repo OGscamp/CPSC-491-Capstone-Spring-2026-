@@ -121,5 +121,63 @@ def save_match_data(match_json):
         conn.close()
         print(f"Saved match {match_id} to database.")
 
+def get_player_stats(puuid):
+    conn = get_db_connection()
+    if conn:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT summoner_id, summoner_name, wins, losses, highest_season_tier FROM PLAYER WHERE summoner_id = %s",
+            (puuid,)
+        )
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return result
+    return None
+
+def get_matches_for_player(puuid, limit=10):
+    conn = get_db_connection()
+    if conn:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT match_id, game_date, game_length, winning_team
+            FROM MATCH_DATA
+            WHERE JSON_SEARCH(raw_json, 'one', %s, NULL, '$.metadata.participants') IS NOT NULL
+            ORDER BY game_date DESC LIMIT %s
+            """,
+            (puuid, limit)
+        )
+        results = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return results
+    return []
+
+def get_raw_match_json(match_id):
+    conn = get_db_connection()
+    if conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT raw_json FROM MATCH_DATA WHERE match_id = %s", (match_id,))
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return row[0] if row else None
+    return None
+
+def get_recent_matches(limit=20):
+    conn = get_db_connection()
+    if conn:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT match_id, game_date, game_length, winning_team FROM MATCH_DATA ORDER BY game_date DESC LIMIT %s",
+            (limit,)
+        )
+        results = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return results
+    return []
+
 if __name__ == "__main__":
     initialize_db()
