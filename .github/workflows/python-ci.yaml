@@ -63,6 +63,13 @@ jobs:
         pytest api_setup/tests/test_flask_endpoints.py -v --tb=short \
           --html=test-reports/flask-report.html --self-contained-html
 
+    - name: Run End-to-End Integration Tests (pytest)
+      env:
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      run: |
+        pytest api_setup/tests/test_end_to_end.py -v --tb=short \
+          --html=test-reports/e2e-report.html --self-contained-html
+
     - name: Upload Test Reports
       uses: actions/upload-artifact@v4
       if: always()
