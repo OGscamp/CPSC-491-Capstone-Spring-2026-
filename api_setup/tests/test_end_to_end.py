@@ -96,8 +96,11 @@ def client():
 def test_health_no_mocks(client):
     """[E2E] Flask test client works with zero mocking — canary test."""
     resp = client.get("/api/health")
+    data = resp.get_json()
     assert resp.status_code == 200
-    assert resp.get_json()["status"] == "ok"
+    assert data["status"] == "ok"
+    print(f"  GET /api/health (no mocks) -> {resp.status_code} | {data}")
+    print(f"  Flask routing and JSON serialization confirmed working")
 
 
 @pytest.mark.skipif(not MODEL_EXISTS, reason="xgb_model.json not found")
@@ -108,46 +111,65 @@ def test_predict_post_with_real_model(client):
         data=json.dumps(_make_e2e_match()),
         content_type="application/json"
     )
-    assert resp.status_code == 200
     data = resp.get_json()
+    assert resp.status_code == 200
     assert 0.0 <= data["team1_win_probability"] <= 1.0
     assert data["predicted_winner"] in ("Team 1", "Team 2")
     assert len(data["features_used"]) == 8
+    print(f"  POST /api/predict (real XGBoost model, no DB) -> {resp.status_code}")
+    print(f"  team1_win_probability={data['team1_win_probability']:.4f} -> "
+          f"predicted_winner='{data['predicted_winner']}'")
+    print(f"  Features extracted: {data['features_used']}")
 
 
 @pytest.mark.skipif(not DB_AVAILABLE or not MODEL_EXISTS,
                     reason="MySQL or xgb_model.json unavailable")
 def test_predict_from_db_full_stack(client):
-    """[E2E] Core path: save_match_data → GET /api/predict/match/<id> → real DB + real model."""
+    """[E2E] Core path: save_match_data -> GET /api/predict/match/<id> -> real DB + real model."""
     save_match_data(_make_e2e_match("NA1-E2E-001"))
     resp = client.get("/api/predict/match/NA1-E2E-001")
-    assert resp.status_code == 200
     data = resp.get_json()
+    assert resp.status_code == 200
     assert 0.0 <= data["team1_win_probability"] <= 1.0
     assert data["predicted_winner"] in ("Team 1", "Team 2")
     assert len(data["features_used"]) == 8
+    print(f"  Wrote match 'NA1-E2E-001' to MySQL MATCH_DATA table")
+    print(f"  GET /api/predict/match/NA1-E2E-001 -> {resp.status_code}")
+    print(f"  Flask read raw JSON from DB -> extracted features -> ran XGBoost")
+    print(f"  team1_win_probability={data['team1_win_probability']:.4f} -> "
+          f"predicted_winner='{data['predicted_winner']}'")
+    print(f"  Features: {data['features_used']}")
 
 
 @pytest.mark.skipif(not DB_AVAILABLE, reason="MySQL unavailable")
 def test_predict_from_db_not_found(client):
     """[E2E] GET /api/predict/match/<id> returns 404 via real DB when match does not exist."""
     resp = client.get("/api/predict/match/NA1-E2E-NONEXISTENT")
+    data = resp.get_json()
     assert resp.status_code == 404
-    assert resp.get_json()["error"] == "Match not found in database"
+    assert data["error"] == "Match not found in database"
+    print(f"  GET /api/predict/match/NA1-E2E-NONEXISTENT (real DB, row does not exist)")
+    print(f"  -> {resp.status_code} | error: '{data['error']}'")
 
 
 @pytest.mark.skipif(not DB_AVAILABLE, reason="MySQL unavailable")
 def test_get_matches_after_save(client):
-    """[E2E] save_player + save_match_data → GET /api/matches/<puuid> returns real DB data."""
+    """[E2E] save_player + save_match_data -> GET /api/matches/<puuid> returns real DB data."""
     save_player("e2e-puuid-001", "E2EUser")
     save_match_data(_make_e2e_match("NA1-E2E-001"))
     resp = client.get("/api/matches/e2e-puuid-001")
-    assert resp.status_code == 200
     data = resp.get_json()
+    assert resp.status_code == 200
     assert data["puuid"] == "e2e-puuid-001"
     assert len(data["matches"]) >= 1
     assert data["matches"][0]["match_id"] == "NA1-E2E-001"
     assert data["matches"][0]["game_length"] == 1800
+    print(f"  Wrote player 'E2EUser' and match 'NA1-E2E-001' to MySQL")
+    print(f"  GET /api/matches/e2e-puuid-001 (real DB, JSON_SEARCH query) -> {resp.status_code}")
+    print(f"  Returned {len(data['matches'])} match(es)")
+    m = data["matches"][0]
+    print(f"  match_id='{m['match_id']}', game_length={m['game_length']}s, "
+          f"winning_team={m['winning_team']}")
 
 
 @pytest.mark.skipif(not DB_AVAILABLE or not MODEL_EXISTS,
@@ -156,9 +178,14 @@ def test_predict_from_db_team2_win(client):
     """[E2E] Second distinct match row (team2 win) runs through full stack without error."""
     save_match_data(_make_e2e_match("NA1-E2E-002", team1_win=False))
     resp = client.get("/api/predict/match/NA1-E2E-002")
-    assert resp.status_code == 200
     data = resp.get_json()
     prob = data["team1_win_probability"]
+    assert resp.status_code == 200
     assert 0.0 <= prob <= 1.0
     expected_winner = "Team 1" if prob >= 0.5 else "Team 2"
     assert data["predicted_winner"] == expected_winner
+    print(f"  Wrote match 'NA1-E2E-002' (team2_win=True) to MySQL")
+    print(f"  GET /api/predict/match/NA1-E2E-002 -> {resp.status_code}")
+    print(f"  team1_win_probability={prob:.4f} -> predicted_winner='{data['predicted_winner']}'")
+    print(f"  Consistency check: prob {'>=0.5' if prob >= 0.5 else '<0.5'} -> "
+          f"'{expected_winner}' matches response OK")

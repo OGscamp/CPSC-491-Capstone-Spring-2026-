@@ -26,8 +26,10 @@ def test_auth_handshake():
     conn = get_db_connection()
     assert conn is not None
     assert conn.is_connected()
-    print(f"Connected to MySQL Server version {conn.get_server_info()}")
+    print(f"  Connected to MySQL Server version: {conn.get_server_info()}")
+    print(f"  Host: 127.0.0.1:3306 | Auth: mysql_native_password")
     conn.close()
+    print(f"  Connection closed cleanly — handshake PASSED")
 
 
 def test_state_verification():
@@ -41,6 +43,9 @@ def test_state_verification():
     conn.close()
     assert result is not None
     assert result['summoner_name'] == "TestUser"
+    print(f"  Inserted:  summoner_id='verify-123', summoner_name='TestUser'")
+    print(f"  Retrieved: {result}")
+    print(f"  wins={result['wins']}, losses={result['losses']} (defaults 0 as expected)")
 
 
 def test_conflict_handling():
@@ -54,3 +59,6 @@ def test_conflict_handling():
     cursor.close()
     conn.close()
     assert result['summoner_name'] == "Original"
+    print(f"  First insert:  summoner_name='Original'")
+    print(f"  Second insert: summoner_name='Clone' (duplicate PUUID)")
+    print(f"  DB result:     summoner_name='{result['summoner_name']}' — INSERT IGNORE kept original")

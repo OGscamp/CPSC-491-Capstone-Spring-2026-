@@ -73,12 +73,18 @@ def test_get_player_stats_returns_fields():
     assert result["summoner_name"] == "R1User"
     assert result["wins"] == 0
     assert result["losses"] == 0
+    print(f"  Queried PUUID: 'test-r1'")
+    print(f"  Returned: summoner_name='{result['summoner_name']}', "
+          f"wins={result['wins']}, losses={result['losses']}, "
+          f"tier={result.get('highest_season_tier')}")
 
 
 def test_get_player_stats_not_found():
     """[Integration] get_player_stats returns None for unknown PUUID."""
     result = get_player_stats("definitely-does-not-exist-xyz")
     assert result is None
+    print(f"  Queried PUUID: 'definitely-does-not-exist-xyz' (not in DB)")
+    print(f"  Returned: None — correct, no row exists")
 
 
 def test_get_raw_match_json_returns_string():
@@ -88,12 +94,19 @@ def test_get_raw_match_json_returns_string():
     assert raw is not None
     assert isinstance(raw, str)
     assert "NA1-RTEST-001" in raw
+    parsed = json.loads(raw)
+    print(f"  Queried match_id: 'NA1-RTEST-001'")
+    print(f"  Returned: raw JSON string ({len(raw)} chars)")
+    print(f"  matchId in parsed JSON: '{parsed['metadata']['matchId']}'")
+    print(f"  gameDuration: {parsed['info']['gameDuration']}s")
 
 
 def test_get_raw_match_json_not_found():
     """[Integration] get_raw_match_json returns None for unknown match ID."""
     result = get_raw_match_json("MATCH-DOES-NOT-EXIST")
     assert result is None
+    print(f"  Queried match_id: 'MATCH-DOES-NOT-EXIST' (not in DB)")
+    print(f"  Returned: None — correct, no row exists")
 
 
 def test_get_recent_matches_returns_list():
@@ -105,6 +118,11 @@ def test_get_recent_matches_returns_list():
     assert "match_id" in results[0]
     assert "game_length" in results[0]
     assert "winning_team" in results[0]
+    print(f"  Inserted match: 'NA1-RTEST-002'")
+    print(f"  get_recent_matches(limit=5) returned {len(results)} row(s)")
+    print(f"  First row: match_id='{results[0]['match_id']}', "
+          f"game_length={results[0]['game_length']}s, "
+          f"winning_team={results[0]['winning_team']}")
 
 
 def test_get_recent_matches_respects_limit():
@@ -113,3 +131,7 @@ def test_get_recent_matches_respects_limit():
         save_match_data(_make_minimal_match(mid, team1_win=(i % 2 == 0)))
     results = get_recent_matches(limit=2)
     assert len(results) <= 2
+    print(f"  Inserted 3 matches into MATCH_DATA")
+    print(f"  get_recent_matches(limit=2) returned {len(results)} row(s) — limit enforced")
+    for r in results:
+        print(f"    {r['match_id']} | winning_team={r['winning_team']}")

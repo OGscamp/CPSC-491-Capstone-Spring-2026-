@@ -64,9 +64,10 @@ _MOCK_PLAYER_STATS = {
 def test_health_returns_200(client):
     """[Functional] /api/health returns 200 and status ok."""
     resp = client.get("/api/health")
-    assert resp.status_code == 200
     data = resp.get_json()
+    assert resp.status_code == 200
     assert data["status"] == "ok"
+    print(f"  GET /api/health -> {resp.status_code} | response: {data}")
 
 
 def test_player_lookup_success(client):
@@ -76,12 +77,15 @@ def test_player_lookup_success(client):
          patch("api_setup.flask_app.get_player_stats", return_value=_MOCK_PLAYER_STATS):
         MockProvider.return_value.get_puuid.return_value = "fake-puuid-001"
         resp = client.get("/api/player/TestUser/NA1")
-    assert resp.status_code == 200
     data = resp.get_json()
+    assert resp.status_code == 200
     assert data["puuid"] == "fake-puuid-001"
     assert data["wins"] == 3
     assert data["losses"] == 2
     assert data["win_rate"] == "60%"
+    print(f"  GET /api/player/TestUser/NA1 -> {resp.status_code}")
+    print(f"  puuid='{data['puuid']}', wins={data['wins']}, losses={data['losses']}, "
+          f"win_rate='{data['win_rate']}' (3/(3+2) = 60%)")
 
 
 def test_player_lookup_not_found(client):
@@ -89,8 +93,11 @@ def test_player_lookup_not_found(client):
     with patch("api_setup.flask_app.RiotAPIProvider") as MockProvider:
         MockProvider.return_value.get_puuid.return_value = None
         resp = client.get("/api/player/FakeUser/0000")
+    data = resp.get_json()
     assert resp.status_code == 404
-    assert "error" in resp.get_json()
+    assert "error" in data
+    print(f"  GET /api/player/FakeUser/0000 -> {resp.status_code}")
+    print(f"  Riot API returned None (player not found) | error: '{data['error']}'")
 
 
 def test_fetch_matches_success(client):
@@ -102,10 +109,12 @@ def test_fetch_matches_success(client):
             data=json.dumps({"puuid": "test-puuid-abc", "count": 3}),
             content_type="application/json"
         )
-    assert resp.status_code == 200
     data = resp.get_json()
+    assert resp.status_code == 200
     assert data["count"] == 3
     assert "Matches fetched" in data["message"]
+    print(f"  POST /api/matches/fetch {{puuid: 'test-puuid-abc', count: 3}} -> {resp.status_code}")
+    print(f"  message='{data['message']}', count={data['count']}")
 
 
 def test_fetch_matches_missing_puuid(client):
@@ -115,8 +124,11 @@ def test_fetch_matches_missing_puuid(client):
         data=json.dumps({}),
         content_type="application/json"
     )
+    data = resp.get_json()
     assert resp.status_code == 400
-    assert resp.get_json()["error"] == "puuid is required"
+    assert data["error"] == "puuid is required"
+    print(f"  POST /api/matches/fetch {{}} (missing puuid) -> {resp.status_code}")
+    print(f"  Validation caught missing field | error: '{data['error']}'")
 
 
 def test_get_matches_for_player(client):
@@ -124,10 +136,14 @@ def test_get_matches_for_player(client):
     mock_row = {"match_id": "NA1_999", "game_date": None, "game_length": 1500, "winning_team": "100"}
     with patch("api_setup.flask_app.get_matches_for_player", return_value=[mock_row]):
         resp = client.get("/api/matches/test-puuid-abc")
-    assert resp.status_code == 200
     data = resp.get_json()
+    assert resp.status_code == 200
     assert len(data["matches"]) == 1
     assert data["matches"][0]["match_id"] == "NA1_999"
+    print(f"  GET /api/matches/test-puuid-abc -> {resp.status_code}")
+    print(f"  {len(data['matches'])} match(es) returned")
+    print(f"  First match: match_id='{data['matches'][0]['match_id']}', "
+          f"game_length={data['matches'][0]['game_length']}s")
 
 
 def test_predict_valid_match(client):
@@ -141,11 +157,15 @@ def test_predict_valid_match(client):
             data=json.dumps(_make_minimal_match()),
             content_type="application/json"
         )
-    assert resp.status_code == 200
     data = resp.get_json()
+    assert resp.status_code == 200
     assert 0.0 <= data["team1_win_probability"] <= 1.0
     assert data["predicted_winner"] in ("Team 1", "Team 2")
     assert len(data["features_used"]) == 8
+    print(f"  POST /api/predict -> {resp.status_code}")
+    print(f"  team1_win_probability={data['team1_win_probability']:.4f}, "
+          f"predicted_winner='{data['predicted_winner']}'")
+    print(f"  features_used: {data['features_used']}")
 
 
 def test_predict_invalid_body(client):
@@ -156,8 +176,11 @@ def test_predict_invalid_body(client):
             data=json.dumps({"garbage": True}),
             content_type="application/json"
         )
+    data = resp.get_json()
     assert resp.status_code == 400
-    assert "error" in resp.get_json()
+    assert "error" in data
+    print(f"  POST /api/predict {{garbage: true}} -> {resp.status_code}")
+    print(f"  Feature extraction raised exception | error: '{data['error']}'")
 
 
 def test_predict_from_stored_match(client):
@@ -169,13 +192,21 @@ def test_predict_from_stored_match(client):
          patch("api_setup.flask_app.extract_team_features", return_value=_MOCK_FEATURES), \
          patch("api_setup.flask_app._get_model", return_value=mock_booster):
         resp = client.get("/api/predict/match/NA1_TESTMATCH")
+    data = resp.get_json()
     assert resp.status_code == 200
-    assert "team1_win_probability" in resp.get_json()
+    assert "team1_win_probability" in data
+    print(f"  GET /api/predict/match/NA1_TESTMATCH -> {resp.status_code}")
+    print(f"  Raw JSON fetched from DB, parsed, features extracted, model predicted")
+    print(f"  team1_win_probability={data['team1_win_probability']:.4f}, "
+          f"predicted_winner='{data['predicted_winner']}'")
 
 
 def test_predict_from_stored_not_found(client):
     """[Functional] /api/predict/match/<id> returns 404 for unknown match ID."""
     with patch("api_setup.flask_app.get_raw_match_json", return_value=None):
         resp = client.get("/api/predict/match/NONEXISTENT")
+    data = resp.get_json()
     assert resp.status_code == 404
-    assert resp.get_json()["error"] == "Match not found in database"
+    assert data["error"] == "Match not found in database"
+    print(f"  GET /api/predict/match/NONEXISTENT -> {resp.status_code}")
+    print(f"  DB returned None (no matching row) | error: '{data['error']}'")
