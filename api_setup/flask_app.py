@@ -27,7 +27,7 @@ CORS(app)
 # --- Lazy model loader ---
 _MODEL = None
 _MODEL_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', 'projects', 'tests', 'output', 'xgb_model.json')
+    os.path.join(os.path.dirname(__file__), '..', 'projects', 'ML Scripts', 'models', 'latest_xgb.json')
 )
 
 FEATURE_COLS = [
