@@ -42,5 +42,16 @@ def test_feature_extraction_valid():
     }
 
     features = extract_team_features(sample)
-    assert "kill_diff" in features
-    assert "win" in features
+    expected_keys = {
+        "gold_diff",
+        "kill_diff",
+        "assist_diff",
+        "cs_diff",
+        "vision_diff",
+        "tower_diff",
+        "dragon_diff",
+        "baron_diff",
+        "win",
+    }
+    assert set(features.keys()) == expected_keys
+    assert features["win"] == 1

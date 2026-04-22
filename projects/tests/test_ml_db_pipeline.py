@@ -127,11 +127,11 @@ def test_train_xgboost_writes_metrics_and_model():
         assert "validation_metrics" in result
         assert "baseline_metrics" in result
         expected_metric_keys = {"accuracy", "precision", "recall", "f1", "roc_auc", "confusion_matrix"}
-        assert expected_metric_keys.issubset(set(result["validation_metrics"].keys()))
-        assert expected_metric_keys.issubset(set(result["baseline_metrics"].keys()))
+        assert set(result["validation_metrics"].keys()) == expected_metric_keys
+        assert set(result["baseline_metrics"].keys()) == expected_metric_keys
         cm_keys = {"tp", "tn", "fp", "fn"}
-        assert cm_keys.issubset(set(result["validation_metrics"]["confusion_matrix"].keys()))
-        assert cm_keys.issubset(set(result["baseline_metrics"]["confusion_matrix"].keys()))
+        assert set(result["validation_metrics"]["confusion_matrix"].keys()) == cm_keys
+        assert set(result["baseline_metrics"]["confusion_matrix"].keys()) == cm_keys
 
 
 def test_ml_inference_path_returns_backend_ready_payload(monkeypatch):
@@ -168,7 +168,8 @@ def test_ml_inference_path_returns_backend_ready_payload(monkeypatch):
 
         assert err is None
         assert payload is not None
+        assert set(payload.keys()) == {"team1_win_probability", "predicted_winner", "features_used"}
         assert 0.0 <= payload["team1_win_probability"] <= 1.0
         assert payload["predicted_winner"] in ("Team 1", "Team 2")
         feature_keys = {"gold_diff", "kill_diff", "assist_diff", "cs_diff", "vision_diff", "tower_diff", "dragon_diff", "baron_diff"}
-        assert feature_keys.issubset(set(payload["features_used"].keys()))
+        assert set(payload["features_used"].keys()) == feature_keys
