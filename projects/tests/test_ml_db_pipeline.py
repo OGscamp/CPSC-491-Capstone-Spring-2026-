@@ -2,6 +2,7 @@ import importlib.util
 import json
 import os
 import tempfile
+import sys
 
 import pandas as pd
 import pytest
@@ -9,8 +10,11 @@ import pytest
 
 THIS_DIR = os.path.dirname(__file__)
 ML_SCRIPTS_DIR = os.path.abspath(os.path.join(THIS_DIR, "..", "ML Scripts"))
+REPO_ROOT = os.path.abspath(os.path.join(THIS_DIR, "..", ".."))
 DB_SCRIPT_PATH = os.path.join(ML_SCRIPTS_DIR, "build_dataset_from_db.py")
 XGB_SCRIPT_PATH = os.path.join(ML_SCRIPTS_DIR, "xgboost_model.py")
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 
 def _load_module(module_path, module_name):
@@ -122,4 +126,49 @@ def test_train_xgboost_writes_metrics_and_model():
         assert os.path.exists(metrics_out)
         assert "validation_metrics" in result
         assert "baseline_metrics" in result
-        assert "roc_auc" in result["validation_metrics"]
+        expected_metric_keys = {"accuracy", "precision", "recall", "f1", "roc_auc", "confusion_matrix"}
+        assert expected_metric_keys.issubset(set(result["validation_metrics"].keys()))
+        assert expected_metric_keys.issubset(set(result["baseline_metrics"].keys()))
+        cm_keys = {"tp", "tn", "fp", "fn"}
+        assert cm_keys.issubset(set(result["validation_metrics"]["confusion_matrix"].keys()))
+        assert cm_keys.issubset(set(result["baseline_metrics"]["confusion_matrix"].keys()))
+
+
+def test_ml_inference_path_returns_backend_ready_payload(monkeypatch):
+    pytest.importorskip("xgboost")
+    xgb_module = _load_module(XGB_SCRIPT_PATH, "xgboost_model_module_inference")
+    from api_setup import flask_app
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dataset = os.path.join(tmpdir, "train.csv")
+        model_out = os.path.join(tmpdir, "latest_xgb.json")
+        metrics_out = os.path.join(tmpdir, "latest_metrics.json")
+        df = pd.DataFrame(
+            [
+                {"gold_diff": 1200, "kill_diff": 6, "assist_diff": 8, "cs_diff": 40, "vision_diff": 12, "tower_diff": 3, "dragon_diff": 2, "baron_diff": 1, "win": 1},
+                {"gold_diff": -900, "kill_diff": -5, "assist_diff": -6, "cs_diff": -30, "vision_diff": -10, "tower_diff": -2, "dragon_diff": -1, "baron_diff": 0, "win": 0},
+                {"gold_diff": 800, "kill_diff": 4, "assist_diff": 5, "cs_diff": 20, "vision_diff": 8, "tower_diff": 2, "dragon_diff": 1, "baron_diff": 0, "win": 1},
+                {"gold_diff": -700, "kill_diff": -3, "assist_diff": -4, "cs_diff": -18, "vision_diff": -7, "tower_diff": -1, "dragon_diff": -1, "baron_diff": 0, "win": 0},
+                {"gold_diff": 1000, "kill_diff": 5, "assist_diff": 7, "cs_diff": 28, "vision_diff": 10, "tower_diff": 2, "dragon_diff": 1, "baron_diff": 1, "win": 1},
+                {"gold_diff": -850, "kill_diff": -4, "assist_diff": -6, "cs_diff": -24, "vision_diff": -9, "tower_diff": -2, "dragon_diff": -1, "baron_diff": 0, "win": 0},
+            ]
+        )
+        df.to_csv(dataset, index=False)
+        xgb_module.train_xgboost(
+            dataset_csv=dataset,
+            model_out=model_out,
+            metrics_out=metrics_out,
+            test_size=0.33,
+            seed=13,
+        )
+
+        monkeypatch.setattr(flask_app, "_MODEL_PATH", model_out)
+        monkeypatch.setattr(flask_app, "_MODEL", None)
+        payload, err = flask_app._run_prediction(_make_match_json("INF-001", team1_win=True))
+
+        assert err is None
+        assert payload is not None
+        assert 0.0 <= payload["team1_win_probability"] <= 1.0
+        assert payload["predicted_winner"] in ("Team 1", "Team 2")
+        feature_keys = {"gold_diff", "kill_diff", "assist_diff", "cs_diff", "vision_diff", "tower_diff", "dragon_diff", "baron_diff"}
+        assert feature_keys.issubset(set(payload["features_used"].keys()))
