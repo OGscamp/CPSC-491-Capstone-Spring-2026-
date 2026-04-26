@@ -26,9 +26,14 @@ CORS(app)
 
 # --- Lazy model loader ---
 _MODEL = None
-_MODEL_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', 'projects', 'tests', 'output', 'xgb_model.json')
-)
+_MODEL_PATHS = [
+    os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '..', 'projects', 'ML Scripts', 'models', 'latest_xgb.json')
+    ),
+    os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '..', 'projects', 'tests', 'output', 'xgb_model.json')
+    ),
+]
 
 FEATURE_COLS = [
     "gold_diff", "kill_diff", "assist_diff", "cs_diff",
@@ -38,11 +43,12 @@ FEATURE_COLS = [
 def _get_model():
     global _MODEL
     if _MODEL is None:
-        if not os.path.exists(_MODEL_PATH):
+        model_path = next((path for path in _MODEL_PATHS if os.path.exists(path)), None)
+        if model_path is None:
             return None
         import xgboost as xgb
         _MODEL = xgb.Booster()
-        _MODEL.load_model(_MODEL_PATH)
+        _MODEL.load_model(model_path)
     return _MODEL
 
 def _run_prediction(match_json):

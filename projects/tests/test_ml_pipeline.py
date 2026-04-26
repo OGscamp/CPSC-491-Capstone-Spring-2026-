@@ -86,7 +86,7 @@ def test_extract_team_features_returns_expected_keys():
         "baron_diff",
         "win",
     }
-    assert expected_keys.issubset(set(features.keys()))
+    assert set(features.keys()) == expected_keys
     assert features["win"] == 1
 
 
